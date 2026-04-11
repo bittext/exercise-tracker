@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Exercise &amp; weight</title>
+    <link rel="stylesheet" th:href="@{/css/tracker.css}"/>
+</head>
+<body>
+<header class="page-header">
+    <nav class="site-nav" aria-label="Main">
+        <span class="site-nav__current">Dashboard</span>
+        <span class="site-nav__sep" aria-hidden="true">·</span>
+        <a th:href="@{/reports}">Reports</a>
+    </nav>
+    <h1>Exercise &amp; weight</h1>
+    <p class="subtitle">Log activity and weight. Use <a th:href="@{/reports}">Reports</a> for calendars and summaries.</p>
+</header>
+
+<main class="layout">
+    <section class="panel forms">
+        <article class="card">
+            <h2>Log weight</h2>
+            <p class="hint">Weight is stored in <strong>kilograms</strong>. One entry per day updates if you log again.</p>
+            <div th:if="${weightSaved}" class="flash ok">Weight saved.</div>
+            <form th:action="@{/weights}" th:object="${weightForm}" method="post">
+                <label>
+                    Date
+                    <input type="date" th:field="*{loggedOn}" required/>
+                </label>
+                <p class="error" th:if="${#fields.hasErrors('loggedOn')}" th:errors="*{loggedOn}"></p>
+                <label>
+                    Weight (kg)
+                    <input type="number" step="0.1" min="20" th:field="*{weightKg}" required/>
+                </label>
+                <p class="error" th:if="${#fields.hasErrors('weightKg')}" th:errors="*{weightKg}"></p>
+                <label>
+                    Note <span class="optional">(optional)</span>
+                    <input type="text" maxlength="500" th:field="*{note}" placeholder="e.g. morning, fasted"/>
+                </label>
+                <button type="submit">Save weight</button>
+            </form>
+        </article>
+
+        <article class="card">
+            <h2>Log exercise</h2>
+            <div th:if="${exerciseSaved}" class="flash ok">Exercise saved.</div>
+            <form th:action="@{/exercises}" th:object="${exerciseForm}" method="post">
+                <label>
+                    Date
+                    <input type="date" th:field="*{loggedOn}" required/>
+                </label>
+                <p class="error" th:if="${#fields.hasErrors('loggedOn')}" th:errors="*{loggedOn}"></p>
+                <label>
+                    Activity
+                    <input type="text" maxlength="200" th:field="*{activity}" placeholder="e.g. run, swim, weights" required/>
+                </label>
+                <p class="error" th:if="${#fields.hasErrors('activity')}" th:errors="*{activity}"></p>
+                <label>
+                    Duration (minutes)
+                    <input type="number" min="1" max="1440" th:field="*{durationMinutes}" required/>
+                </label>
+                <p class="error" th:if="${#fields.hasErrors('durationMinutes')}" th:errors="*{durationMinutes}"></p>
+                <label>
+                    Note <span class="optional">(optional)</span>
+                    <input type="text" maxlength="500" th:field="*{note}"/>
+                </label>
+                <button type="submit">Save exercise</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="panel tables">
+        <article class="card">
+            <h2>Recent weights</h2>
+            <div class="table-wrap" th:if="${!weights.isEmpty()}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>kg</th>
+                        <th>Note</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="w : ${weights}">
+                        <td th:text="${#temporals.format(w.loggedOn, 'yyyy-MM-dd')}">2026-01-01</td>
+                        <td th:text="${#numbers.formatDecimal(w.weightKg, 1, 2)}">70.0</td>
+                        <td th:text="${w.note} ?: '—'">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="empty" th:if="${weights.isEmpty()}">No weights yet.</p>
+        </article>
+
+        <article class="card">
+            <h2>Recent exercise</h2>
+            <div class="table-wrap" th:if="${!exercises.isEmpty()}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Activity</th>
+                        <th>Min</th>
+                        <th>Note</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="e : ${exercises}">
+                        <td th:text="${#temporals.format(e.loggedOn, 'yyyy-MM-dd')}">2026-01-01</td>
+                        <td th:text="${e.activity}">Run</td>
+                        <td th:text="${e.durationMinutes}">30</td>
+                        <td th:text="${e.note} ?: '—'">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="empty" th:if="${exercises.isEmpty()}">No exercise logged yet.</p>
+        </article>
+    </section>
+</main>
+
+<footer class="page-footer">
+    <p><a th:href="@{/reports}">Reports &amp; calendar</a></p>
+</footer>
+</body>
+</html>

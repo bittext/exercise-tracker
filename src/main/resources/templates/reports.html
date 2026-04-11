@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Reports &amp; calendar</title>
+    <link rel="stylesheet" th:href="@{/css/tracker.css}"/>
+</head>
+<body>
+<header class="page-header">
+    <nav class="site-nav" aria-label="Main">
+        <a th:href="@{/}">Dashboard</a>
+        <span class="site-nav__sep" aria-hidden="true">·</span>
+        <span class="site-nav__current">Reports</span>
+    </nav>
+    <h1>Reports &amp; exercise calendar</h1>
+    <p class="subtitle">Daily and monthly summaries of weight and activity. The calendar highlights every day you logged exercise.</p>
+</header>
+
+<main class="layout layout--reports">
+    <section class="panel panel--full">
+        <div class="mode-switch" role="tablist" aria-label="Report period">
+            <a th:href="@{/reports(mode='daily', date=${selectedDate})}"
+               th:classappend="${mode == 'daily'} ? ' mode-switch__link--active'"
+               class="mode-switch__link">Daily</a>
+            <a th:href="@{/reports(mode='monthly', year=${calendarYearMonth.year}, month=${calendarYearMonth.monthValue})}"
+               th:classappend="${mode == 'monthly'} ? ' mode-switch__link--active'"
+               class="mode-switch__link">Monthly</a>
+        </div>
+
+        <!-- Daily report -->
+        <article class="card" th:if="${mode == 'daily'}">
+            <h2>Daily report</h2>
+            <div class="report-toolbar">
+                <a class="btn-ghost" th:href="@{/reports(mode='daily', date=${prevDay})}">← Previous day</a>
+                <form class="inline-form" th:action="@{/reports}" method="get">
+                    <input type="hidden" name="mode" value="daily"/>
+                    <label class="inline-form__label">
+                        <span class="sr-only">Date</span>
+                        <input type="date" name="date" th:value="${selectedDate}" required/>
+                    </label>
+                    <button type="submit" class="btn-ghost">Go</button>
+                </form>
+                <a class="btn-ghost" th:href="@{/reports(mode='daily', date=${nextDay})}">Next day →</a>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-chip">
+                    <span class="stat-chip__label">Exercise sessions</span>
+                    <span class="stat-chip__value" th:text="${dayExerciseSessions}">0</span>
+                </div>
+                <div class="stat-chip">
+                    <span class="stat-chip__label">Total minutes</span>
+                    <span class="stat-chip__value" th:text="${dayExerciseMinutes}">0</span>
+                </div>
+            </div>
+
+            <div class="report-block" th:if="${dayWeight != null}">
+                <h3>Weight</h3>
+                <p class="report-lead">
+                    <strong th:text="${#numbers.formatDecimal(dayWeight.weightKg, 1, 'COMMA', 2, 'POINT')}">70.0</strong> kg
+                    <span th:if="${dayWeight.note != null}" th:text="' — ' + ${dayWeight.note}" class="muted"></span>
+                </p>
+            </div>
+            <p class="empty" th:if="${dayWeight == null}">No weight logged for this day.</p>
+
+            <div class="report-block" th:if="${!dayMinutesByActivity.isEmpty()}">
+                <h3>Time by activity</h3>
+                <ul class="kv-list">
+                    <li th:each="e : ${dayMinutesByActivity.entrySet()}">
+                        <span th:text="${e.key}">Run</span>
+                        <span th:text="${e.value} + ' min'">30 min</span>
+                    </li>
+                </ul>
+            </div>
+
+            <h3>Exercise log</h3>
+            <div class="table-wrap" th:if="${!dayExercises.isEmpty()}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Activity</th>
+                        <th>Minutes</th>
+                        <th>Note</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="e : ${dayExercises}">
+                        <td th:text="${e.activity}">Run</td>
+                        <td th:text="${e.durationMinutes}">30</td>
+                        <td th:text="${e.note} ?: '—'">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="empty" th:if="${dayExercises.isEmpty()}">No exercise logged for this day.</p>
+        </article>
+
+        <!-- Monthly report + calendar -->
+        <article class="card" th:if="${mode == 'monthly'}">
+            <h2>Monthly report</h2>
+            <div class="report-toolbar report-toolbar--wrap">
+                <a class="btn-ghost"
+                   th:href="@{/reports(mode='monthly', year=${prevYearMonth.year}, month=${prevYearMonth.monthValue})}">
+                    ← <span th:text="${#temporals.format(prevYearMonth.atDay(1), 'MMM yyyy')}">Mar 2026</span>
+                </a>
+                <form class="inline-form" th:action="@{/reports}" method="get">
+                    <input type="hidden" name="mode" value="monthly"/>
+                    <label>
+                        Month
+                        <select name="month">
+                            <option th:each="m : ${#numbers.sequence(1, 12)}"
+                                    th:value="${m}"
+                                    th:selected="${m == calendarYearMonth.monthValue}"
+                                    th:text="${T(java.time.Month).of(m).getDisplayName(T(java.time.format.TextStyle).FULL, T(java.util.Locale).ENGLISH)}">January</option>
+                        </select>
+                    </label>
+                    <label>
+                        Year
+                        <input type="number" name="year" min="2000" max="2100" th:value="${calendarYearMonth.year}" required/>
+                    </label>
+                    <button type="submit" class="btn-ghost">Show</button>
+                </form>
+                <a class="btn-ghost"
+                   th:href="@{/reports(mode='monthly', year=${nextYearMonth.year}, month=${nextYearMonth.monthValue})}">
+                    <span th:text="${#temporals.format(nextYearMonth.atDay(1), 'MMM yyyy')}">May 2026</span> →
+                </a>
+            </div>
+
+            <p class="calendar-title" th:text="${#temporals.format(calendarYearMonth.atDay(1), 'MMMM yyyy')}">April 2026</p>
+
+            <div class="stat-row">
+                <div class="stat-chip">
+                    <span class="stat-chip__label">Days with exercise</span>
+                    <span class="stat-chip__value" th:text="${monthlyExerciseDays}">0</span>
+                </div>
+                <div class="stat-chip">
+                    <span class="stat-chip__label">Exercise sessions</span>
+                    <span class="stat-chip__value" th:text="${monthlyExerciseSessions}">0</span>
+                </div>
+                <div class="stat-chip">
+                    <span class="stat-chip__label">Total minutes</span>
+                    <span class="stat-chip__value" th:text="${monthlyExerciseMinutes}">0</span>
+                </div>
+                <div class="stat-chip">
+                    <span class="stat-chip__label">Weight entries</span>
+                    <span class="stat-chip__value" th:text="${monthlyWeightsCount}">0</span>
+                </div>
+            </div>
+
+            <div class="stat-row stat-row--compact" th:if="${monthlyWeightsCount > 0}">
+                <div class="stat-chip stat-chip--small">
+                    <span class="stat-chip__label">Weight min (month)</span>
+                    <span class="stat-chip__value" th:if="${monthWeightMin.isPresent()}"
+                          th:text="${#numbers.formatDecimal(monthWeightMin.get(), 1, 'COMMA', 2, 'POINT')} + ' kg'">—</span>
+                </div>
+                <div class="stat-chip stat-chip--small">
+                    <span class="stat-chip__label">Weight max (month)</span>
+                    <span class="stat-chip__value" th:if="${monthWeightMax.isPresent()}"
+                          th:text="${#numbers.formatDecimal(monthWeightMax.get(), 1, 'COMMA', 2, 'POINT')} + ' kg'">—</span>
+                </div>
+                <div class="stat-chip stat-chip--small">
+                    <span class="stat-chip__label">Weight avg (month)</span>
+                    <span class="stat-chip__value" th:if="${monthWeightAvg.isPresent()}"
+                          th:text="${#numbers.formatDecimal(monthWeightAvg.get(), 1, 'COMMA', 2, 'POINT')} + ' kg'">—</span>
+                </div>
+            </div>
+
+            <h3>Exercise calendar</h3>
+            <p class="legend">
+                <span class="legend__swatch legend__swatch--exercise"></span> Exercise logged
+                <span class="legend__swatch legend__swatch--today"></span> Today
+            </p>
+            <div class="calendar-wrap">
+                <table class="calendar" role="grid" th:attr="aria-label=${'Exercise calendar for ' + #temporals.format(calendarYearMonth.atDay(1), 'MMMM yyyy')}">
+                    <thead>
+                    <tr>
+                        <th scope="col">Sun</th>
+                        <th scope="col">Mon</th>
+                        <th scope="col">Tue</th>
+                        <th scope="col">Wed</th>
+                        <th scope="col">Thu</th>
+                        <th scope="col">Fri</th>
+                        <th scope="col">Sat</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="week : ${calendarWeeks}">
+                        <td th:each="cell : ${week}"
+                            th:with="iso=${cell != null ? #temporals.format(cell, 'yyyy-MM-dd') : ''}"
+                            th:class="${cell == null ? 'cal-day cal-day--empty' : 'cal-day' + (cell.equals(today) ? ' cal-day--today' : '') + (exerciseDatesInView.contains(cell) ? ' cal-day--exercise' : '')}"
+                            th:attr="data-date=${iso}">
+                            <th:block th:if="${cell != null}">
+                                <span class="cal-day__num" th:text="${cell.dayOfMonth}">1</span>
+                                <span class="cal-day__badge" th:if="${exerciseDatesInView.contains(cell)}">✓</span>
+                                <span class="cal-day__meta" th:if="${exerciseMinutesByIso.containsKey(iso)}"
+                                      th:text="${exerciseMinutesByIso.get(iso)} + ' min'">30 min</span>
+                                <span class="cal-day__meta cal-day__meta--weight" th:if="${weightKgByIso.containsKey(iso)}"
+                                      th:text="${#numbers.formatDecimal(weightKgByIso.get(iso), 1, 'COMMA', 2, 'POINT')} + ' kg'">70 kg</span>
+                            </th:block>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Exercise time by activity (month)</h3>
+            <div class="table-wrap" th:if="${!monthMinutesByActivity.isEmpty()}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Activity</th>
+                        <th>Total minutes</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="e : ${monthMinutesByActivity.entrySet()}">
+                        <td th:text="${e.key}">Run</td>
+                        <td th:text="${e.value}">120</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="empty" th:if="${monthMinutesByActivity.isEmpty()}">No exercise in this month.</p>
+
+            <h3>Weight log (month)</h3>
+            <div class="table-wrap" th:if="${monthlyWeightsCount > 0}">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>kg</th>
+                        <th>Note</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="w : ${monthWeightRows}">
+                        <td th:text="${#temporals.format(w.loggedOn, 'yyyy-MM-dd')}">2026-04-01</td>
+                        <td th:text="${#numbers.formatDecimal(w.weightKg, 1, 'COMMA', 2, 'POINT')}">70.0</td>
+                        <td th:text="${w.note} ?: '—'">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="empty" th:if="${monthlyWeightsCount == 0}">No weights logged this month.</p>
+        </article>
+    </section>
+</main>
+
+<footer class="page-footer">
+    <p><a th:href="@{/}">← Back to dashboard</a></p>
+</footer>
+</body>
+</html>
